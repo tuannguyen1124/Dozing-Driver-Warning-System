@@ -1,0 +1,72 @@
+import time, os
+import RPi.GPIO as GPIO
+import serial
+import playsound
+
+
+GPIO.setmode(GPIO.BOARD) #set mode Board cho Ras
+GPIO.setup(11, GPIO.IN)  #set chan so 11 nhan digital input cua cam bien nong do con
+
+path2= '/home/pi/dev/alarm2.wav'  # path to drunk driving alert wav
+
+counter=0  #bien dem so lan xuat hien nong do con trong 3s
+
+def playSound(path) :
+	playsound.playsound(path);
+	print("Playing drunk driving alert wav file")
+def sendSMS():
+    port= serial.Serial('/dev/ttyS0', baudrate= 9600, timeout= 1)
+
+    port.write(('AT\r').encode());
+    rcv= port.read(10)
+    print( rcv)
+    time.sleep(1)
+
+    port.write(('ATE0\r').encode())
+    rcv= port.read(10)
+    print(rcv)
+    time.sleep(1)
+
+    port.write(('AT+CMGF=1\r').encode());
+    rcv= port.read(10)
+    print(rcv)
+    time.sleep(1)
+
+    port.write(("AT+CMNI= 2,1,0,0,0\r").encode())
+    rcv= port.read(10)
+    print(rcv)
+    time.sleep(1)
+
+    port.write(('AT+CMGS="0766646234"\r').encode())
+    rcv= port.read(10)
+    print(rcv)
+    time.sleep(1)
+
+    port.write(('MR.A has drunk before driving. Call him now to notice him for his safety.\r').encode());
+    rcv= port.read(10)
+    print(rcv)
+
+    port.write(("\x1A").encode())
+       
+while True:
+    digitalInput= GPIO.input(11)  #doc gia tri cua cam bien nong do con
+    # digital input nen 0 tuong ung voi xuat hien con trong khong khi va nguoc lai
+   
+    if digitalInput==0 :          # neu xuat hien con trong xe hoi    
+        print("ancohol is detected")
+        print(digitalInput)
+        counter+=1
+	print(counter)
+        
+    else:
+        print("No ancohol is detected")
+        print(digitalInput)
+        counter=0
+	print(counter)
+    if counter==3 :
+            sendSMS()
+	    playSound(path2)
+            counter=0
+	    print(counter)
+	    time.sleep(20)	
+    time.sleep(0.5)
